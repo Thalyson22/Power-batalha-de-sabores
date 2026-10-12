@@ -13,15 +13,11 @@ create table if not exists power_private.campaigns (
 create table if not exists power_private.ballots (
   campaign_id text not null references power_private.campaigns(id),
   voter_hash text not null check (voter_hash ~ '^[0-9a-f]{64}$'),
-  pre text not null check (pre in ('pina-colada', 'uva', 'manga', 'laranja-tangerina')),
+  pre text not null check (pre in ('espinafreada', 'uva', 'manga', 'laranja-tangerina')),
   whey text not null check (whey in ('morango', 'baunilha', 'chocolate', 'cookies', 'leitinho')),
   submitted_at timestamptz not null default now(),
   primary key (campaign_id, voter_hash)
 );
--- Piña colada substituiu Espinafreada: bancos criados antes da troca convertem os votos e a regra de sabores.
-alter table power_private.ballots drop constraint if exists ballots_pre_check;
-update power_private.ballots set pre = 'pina-colada' where pre = 'espinafreada';
-alter table power_private.ballots add constraint ballots_pre_check check (pre in ('pina-colada', 'uva', 'manga', 'laranja-tangerina'));
 alter table power_private.campaigns enable row level security;
 alter table power_private.ballots enable row level security;
 revoke all on power_private.campaigns, power_private.ballots from public, anon, authenticated, service_role;
@@ -63,7 +59,7 @@ declare
   inserted integer;
 begin
   if p_voter_hash is null or p_voter_hash !~ '^[0-9a-f]{64}$'
-    or p_pre is null or p_pre not in ('pina-colada', 'uva', 'manga', 'laranja-tangerina')
+    or p_pre is null or p_pre not in ('espinafreada', 'uva', 'manga', 'laranja-tangerina')
     or p_whey is null or p_whey not in ('morango', 'baunilha', 'chocolate', 'cookies', 'leitinho') then
     raise exception 'INVALID_VOTE';
   end if;

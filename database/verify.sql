@@ -23,23 +23,15 @@ begin
   assert (result->>'total')::int = 2, 'Outro navegador deve somar';
   assert (result #>> '{counts,pre,uva}')::int + (result #>> '{counts,pre,manga}')::int = 2;
   assert (result #>> '{counts,whey,leitinho}')::int + (result #>> '{counts,whey,cookies}')::int = 2;
-  result := public.power_cast_vote(poll, repeat('d',64), 'pina-colada', 'morango');
-  assert (result #>> '{counts,pre,pina-colada}')::int = 1, 'Piña colada deve ser aceito';
-  begin
-    perform public.power_cast_vote(poll, repeat('e',64), 'espinafreada', 'morango');
-    raise exception 'Espinafreada não deveria ser aceito';
-  exception when raise_exception then
-    if sqlerrm <> 'INVALID_VOTE' then raise; end if;
-  end;
   update power_private.campaigns set is_open = false where id = poll;
   result := public.power_cast_vote(poll, repeat('c',64), 'uva', 'cookies');
   assert (result->>'closed')::boolean, 'Campanha fechada deve bloquear novos votos';
-  assert (result->>'total')::int = 3, 'Votação fechada não pode alterar total';
+  assert (result->>'total')::int = 2, 'Votação fechada não pode alterar total';
   assert not has_function_privilege('anon', 'public.power_cast_vote(text,text,text,text)', 'EXECUTE');
   assert not has_function_privilege('authenticated', 'public.power_cast_vote(text,text,text,text)', 'EXECUTE');
   assert has_function_privilege('service_role', 'public.power_cast_vote(text,text,text,text)', 'EXECUTE');
   assert not has_schema_privilege('anon', 'power_private', 'USAGE');
-  raise notice 'OK: soma, idempotência, voto original, sabores, encerramento e privilégios.';
+  raise notice 'OK: soma, idempotência, voto original, encerramento e privilégios.';
 end;
 $$;
 rollback;
