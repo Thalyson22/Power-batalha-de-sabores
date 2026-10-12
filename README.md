@@ -1,4 +1,4 @@
-# Batalha dos Sabores — Power Nutrifit
+# Batalha dos Sabores — Power NutriFit
 
 Votação com confirmação, contagem compartilhada e ranking separado para pré-treino Fritz e whey. Campanha da degustação de **13 de outubro de 2026, a partir das 15h, na PS Fit Academia (Piauí Shopping, Picos)**.
 

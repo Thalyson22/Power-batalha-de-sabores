@@ -1,4 +1,4 @@
--- Power Nutrifit: execute este arquivo completo no SQL Editor do Supabase.
+-- Power NutriFit: execute este arquivo completo no SQL Editor do Supabase.
 -- Não apaga votos e não reabre campanhas existentes ao executar novamente.
 begin;
 create schema if not exists power_private;
