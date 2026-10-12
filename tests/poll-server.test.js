@@ -5,7 +5,7 @@ import { handlePoll } from '../lib/poll-server.js';
 const POLL = 'power-2026-10-13';
 const ENV = {
   SUPABASE_URL: 'https://exemplo.supabase.co',
-  SUPABASE_SECRET_KEY: 'sb_secret_teste',
+  SUPABASE_SECRET_KEY: 'sb_secret_Ab3dEf6hIj9kLm2nOp5qRs_x8Yz1W4v7',
   VOTE_COOKIE_SECRET: 'x'.repeat(40),
   POLL_ID: POLL
 };
@@ -166,9 +166,12 @@ test('configuração incompleta informa qual variável corrigir, sem consultar o
     [{ ...ENV, SUPABASE_URL: 'http://exemplo.supabase.co' }, 'SUPABASE_URL'],
     [{ ...ENV, SUPABASE_URL: 'postgresql://postgres:senha@db.exemplo.supabase.co:5432/postgres' }, 'SUPABASE_URL'],
     [{ ...ENV, SUPABASE_URL: 'https://supabase.com/dashboard/project/abcd1234/settings/api' }, 'SUPABASE_URL'],
+    [{ ...ENV, SUPABASE_URL: 'abcd1234' }, 'SUPABASE_URL'],
     [{ ...ENV, SUPABASE_SECRET_KEY: undefined }, 'SUPABASE_SECRET_KEY'],
     [{ ...ENV, SUPABASE_SECRET_KEY: 'eyJhbGciOiJIUzI1NiJ9.legado' }, 'SUPABASE_SECRET_KEY'],
     [{ ...ENV, SUPABASE_SECRET_KEY: 'sb_publishable_abc' }, 'SUPABASE_SECRET_KEY'],
+    [{ ...ENV, SUPABASE_SECRET_KEY: 'sb_secret_Ab3dE••••••••••••••••' }, 'SUPABASE_SECRET_KEY'],
+    [{ ...ENV, SUPABASE_SECRET_KEY: 'Bearer ' + ENV.SUPABASE_SECRET_KEY }, 'SUPABASE_SECRET_KEY'],
     [{ ...ENV, VOTE_COOKIE_SECRET: 'curto' }, 'VOTE_COOKIE_SECRET'],
     [{ ...ENV, VOTE_COOKIE_SECRET: 'SUBSTITUA_POR_32_OU_MAIS_CARACTERES_ALEATORIOS' }, 'VOTE_COOKIE_SECRET'],
     [{ ...ENV, POLL_ID: 'id inválido' }, 'POLL_ID']
@@ -186,15 +189,17 @@ test('valores colados com espaços ou URL sem https:// continuam válidos', asyn
   const db = fakeDatabase();
   const env = {
     SUPABASE_URL: '  exemplo.supabase.co/  ',
-    SUPABASE_SECRET_KEY: ' sb_secret_teste\n',
+    SUPABASE_SECRET_KEY: ' ' + ENV.SUPABASE_SECRET_KEY + '\n',
     VOTE_COOKIE_SECRET: '\t' + 'x'.repeat(40) + ' ',
     POLL_ID: ' power-2026-10-13\n'
   };
+  const quoted = { SUPABASE_URL: '"https://exemplo.supabase.co"', SUPABASE_SECRET_KEY: "'" + ENV.SUPABASE_SECRET_KEY + "'", VOTE_COOKIE_SECRET: ENV.VOTE_COOKIE_SECRET, POLL_ID: '"power-2026-10-13"' };
+  assert.equal((await handlePoll(get(), { env: quoted, fetcher: db.fetcher })).status, 200);
   const response = await handlePoll(get(), { env, fetcher: db.fetcher });
   assert.equal(response.status, 200);
   const call = db.calls.at(-1);
   assert.equal(call.url, 'https://exemplo.supabase.co/rest/v1/rpc/power_poll_snapshot');
-  assert.equal(call.init.headers.apikey, 'sb_secret_teste');
+  assert.equal(call.init.headers.apikey, ENV.SUPABASE_SECRET_KEY);
   assert.equal(call.args.p_campaign, POLL);
 });
 
@@ -204,6 +209,7 @@ test('falha ou resposta inválida do banco vira 503 com o motivo e sem detalhes 
     [async () => { throw new Error('conexão recusada sb_secret_teste'); }, 'DATABASE_UNREACHABLE'],
     [async () => new Response('{"message":"Invalid API key sb_secret_teste"}', { status: 401 }), 'DATABASE_KEY'],
     [async () => new Response('{"code":"PGRST202"}', { status: 404 }), 'DATABASE_SETUP'],
+    [async () => new Response('{"code":"PGRST002","message":"Could not query the database for the schema cache. Retrying."}', { status: 503 }), 'DATABASE_API'],
     [async () => new Response('{"message":"sb_secret_teste"}', { status: 500 }), 'DATABASE_ERROR'],
     [async () => Response.json(null), 'CAMPAIGN_NOT_FOUND'],
     [async () => new Response('<html>', { status: 200 }), 'DATABASE_RESPONSE'],
@@ -218,6 +224,37 @@ test('falha ou resposta inválida do banco vira 503 com o motivo e sem detalhes 
   }
   assert.equal(logs.mock.callCount(), failures.length);
   for (const call of logs.mock.calls) assert.ok(!call.arguments.join(' ').includes('sb_secret'));
+});
+
+test('atrás do proxy da Vercel usa o endereço público https para cookie e origem', async () => {
+  const db = fakeDatabase();
+  const behindProxy = (method, headers = {}, body) => new Request('http://power.example/api/poll', {
+    method, body, headers: { host: 'power.example', 'x-forwarded-host': 'power.example', 'x-forwarded-proto': 'https', ...headers }
+  });
+  const first = await handlePoll(behindProxy('GET'), { env: ENV, fetcher: db.fetcher });
+  assert.match(first.headers.get('set-cookie'), /^__Host-power_vote=.*; Secure$/);
+  const cookie = cookieOf(first);
+  const json = { 'content-type': 'application/json', cookie };
+  const vote = await handlePoll(behindProxy('POST', { ...json, origin: 'https://power.example' }, '{"pre":"uva","whey":"leitinho"}'), { env: ENV, fetcher: db.fetcher });
+  assert.equal(vote.status, 200);
+  assert.equal((await vote.json()).accepted, true);
+  const other = await handlePoll(behindProxy('POST', { ...json, origin: 'https://outro.example' }, '{"pre":"uva","whey":"leitinho"}'), { env: ENV, fetcher: db.fetcher });
+  assert.equal(other.status, 403);
+});
+
+test('navegador que declara mesma origem pode votar mesmo sem cabeçalho Origin', async () => {
+  const db = fakeDatabase();
+  const cookie = await newBrowser(db);
+  const request = new Request(ORIGIN + '/api/poll', {
+    method: 'POST', body: '{"pre":"manga","whey":"baunilha"}',
+    headers: { 'content-type': 'application/json', cookie, 'sec-fetch-site': 'same-origin' }
+  });
+  assert.equal((await handlePoll(request, { env: ENV, fetcher: db.fetcher })).status, 200);
+  const sameSite = new Request(ORIGIN + '/api/poll', {
+    method: 'POST', body: '{"pre":"manga","whey":"baunilha"}',
+    headers: { 'content-type': 'application/json', cookie, 'sec-fetch-site': 'same-site', origin: 'https://loja.power.example' }
+  });
+  assert.equal((await handlePoll(sameSite, { env: ENV, fetcher: db.fetcher })).status, 403);
 });
 
 test('cookie local sem HTTPS não usa prefixo __Host-', async () => {

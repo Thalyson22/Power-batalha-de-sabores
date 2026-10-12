@@ -99,14 +99,15 @@ A mensagem termina com um **código** que indica a causa. O mesmo código aparec
 
 | Código | Causa provável | Como corrigir |
 | --- | --- | --- |
-| `SUPABASE_URL` | Variável vazia, sem `https://`, com a string de conexão `postgresql://` ou com o endereço do painel `supabase.com/dashboard/...` | Use a Project URL, no formato `https://abcd1234.supabase.co` |
-| `SUPABASE_SECRET_KEY` | Variável vazia, chave antiga `eyJ...` ou chave Publishable | Use a chave Secret que começa com `sb_secret_` |
+| `SUPABASE_URL` | Variável vazia, só o código do projeto, com a string de conexão `postgresql://` ou com o endereço do painel `supabase.com/dashboard/...` | Use a Project URL, no formato `https://abcd1234.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Variável vazia, chave antiga `eyJ...`, chave Publishable ou chave copiada mascarada (`sb_secret_xxxxx••••`) | Em **Settings → API Keys**, clique no ícone de copiar ao lado da chave Secret. Selecionar o texto copia só a parte visível |
 | `VOTE_COOKIE_SECRET` | Menos de 32 caracteres | Gere um segredo novo, conforme o início deste guia |
 | `POLL_ID` | Espaços ou caracteres inválidos no meio | Use `power-2026-10-13` |
 | `DATABASE_UNREACHABLE` | O endereço do Supabase não respondeu: URL errada ou projeto pausado | Confira a URL e se o projeto está ativo no painel |
 | `DATABASE_KEY` | O Supabase recusou a chave: é de outro projeto, foi revogada ou foi copiada incompleta | Copie de novo a Secret do **mesmo** projeto da URL |
 | `DATABASE_SETUP` | As funções de votação não foram encontradas: `setup.sql` rodou em outro projeto ou a Data API está desativada | Rode `database/setup.sql` no projeto da URL e confira se a Data API está ativa |
 | `CAMPAIGN_NOT_FOUND` | O `POLL_ID` não existe no banco | Use `power-2026-10-13` ou crie a campanha com esse ID |
+| `DATABASE_API` | A Data API do Supabase está desativada | Em **Integrations → Data API**, ative **Enable Data API** e confira se `public` está em **Exposed schemas** |
 | `DATABASE_ERROR`, `DATABASE_RESPONSE` | Resposta inesperada do banco | Rode `database/setup.sql` de novo e confira os logs da função |
 | `API_404` | A função `api/poll.js` não foi publicada | Confira se o projeto foi importado com a pasta `api` e Framework Preset **Other** |
 | `API_401`, `API_403` | A Vercel exigiu login antes de liberar a API (proteção de deploy) | Abra o domínio de produção, não o endereço de um deploy específico |
