@@ -316,9 +316,9 @@
       try {
         const response = await fetch(config.api, { method, credentials:'same-origin', cache:'no-store', headers: body ? {'Content-Type':'application/json'} : {Accept:'application/json'}, body: body ? JSON.stringify(body) : undefined, signal: controller.signal });
         const type = response.headers.get('content-type') || '';
-        if (!type.includes('application/json')) throw new Error('POLL_UNAVAILABLE');
+        if (!type.includes('application/json')) throw new Error('API_' + response.status);
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'POLL_UNAVAILABLE');
+        if (!response.ok) { const error = new Error(data.error || 'POLL_UNAVAILABLE'); error.reason = data.reason; throw error; }
         return validateSnapshot(data);
       } finally { clearTimeout(timeout); }
     }
@@ -331,12 +331,14 @@
       $('refresh-ranking').disabled = true;
       refreshPromise = (async () => {
         try { const data = await request(); applySnapshot(data); return data; }
-        catch {
+        catch (error) {
           state.ready = false;
+          // Código curto para identificar a causa no README, sem dados sensíveis.
+          const code = error.reason || (/^[A-Z0-9_]+$/.test(error.message) ? error.message : 'NETWORK');
           $('poll-status').textContent = 'Aguardando conexão';
           $('poll-status').classList.remove('is-live');
           $('ranking-status').classList.add('is-error');
-          $('ranking-status').textContent = state.snapshot ? 'Sem conexão no momento. O ranking abaixo mostra a última contagem recebida. Tente atualizar.' : 'A votação ainda não está disponível. Tente atualizar em instantes para consultar a contagem e seu registro de voto.';
+          $('ranking-status').textContent = (state.snapshot ? 'Sem conexão no momento. O ranking abaixo mostra a última contagem recebida. Tente atualizar.' : 'A votação ainda não está disponível. Tente atualizar em instantes para consultar a contagem e seu registro de voto.') + ' Código: ' + code + '.';
           if (!state.snapshot) groups.forEach(group => { $('ranking-' + group).replaceChildren(); const tr = document.createElement('tr'), td = document.createElement('td'); td.colSpan = 4; td.className = 'table-empty'; td.textContent = 'Aguardando a contagem de votos.'; tr.append(td); $('ranking-' + group).append(tr); });
           render(); return null;
         } finally { $('refresh-ranking').disabled = false; refreshPromise = null; scheduleRefresh(); }

@@ -93,7 +93,27 @@ Execute `npm test` para testar a API com uma camada de banco simulada. Execute `
 
 Os testes locais cobrem confirmação, repetição, isolamento entre navegadores, ranking, erros de conexão e validação. O SQL foi fornecido para execução e conferência no seu Supabase; não foi executado contra uma conta real nesta entrega. A publicação na Vercel e a conferência visual em navegador ainda dependem da configuração na sua conta.
 
-Se aparecer “A votação ainda não está disponível”, confira as variáveis, o setup SQL e o redeploy. A rota `/api/poll` precisa responder JSON. Se responder HTML ou 404, a pasta `api` não foi implantada corretamente. Servir apenas o HTML ou usar GitHub Pages não executa essa API.
+## Se aparecer “A votação ainda não está disponível”
+
+A mensagem termina com um **código** que indica a causa. O mesmo código aparece no campo `reason` ao abrir `/api/poll` no navegador e nos logs da função na Vercel. Depois de corrigir uma variável na Vercel, faça **Deployments → ⋯ → Redeploy**: variáveis alteradas não valem para o deploy que já está no ar.
+
+| Código | Causa provável | Como corrigir |
+| --- | --- | --- |
+| `SUPABASE_URL` | Variável vazia, sem `https://`, com a string de conexão `postgresql://` ou com o endereço do painel `supabase.com/dashboard/...` | Use a Project URL, no formato `https://abcd1234.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Variável vazia, chave antiga `eyJ...` ou chave Publishable | Use a chave Secret que começa com `sb_secret_` |
+| `VOTE_COOKIE_SECRET` | Menos de 32 caracteres | Gere um segredo novo, conforme o início deste guia |
+| `POLL_ID` | Espaços ou caracteres inválidos no meio | Use `power-2026-10-13` |
+| `DATABASE_UNREACHABLE` | O endereço do Supabase não respondeu: URL errada ou projeto pausado | Confira a URL e se o projeto está ativo no painel |
+| `DATABASE_KEY` | O Supabase recusou a chave: é de outro projeto, foi revogada ou foi copiada incompleta | Copie de novo a Secret do **mesmo** projeto da URL |
+| `DATABASE_SETUP` | As funções de votação não foram encontradas: `setup.sql` rodou em outro projeto ou a Data API está desativada | Rode `database/setup.sql` no projeto da URL e confira se a Data API está ativa |
+| `CAMPAIGN_NOT_FOUND` | O `POLL_ID` não existe no banco | Use `power-2026-10-13` ou crie a campanha com esse ID |
+| `DATABASE_ERROR`, `DATABASE_RESPONSE` | Resposta inesperada do banco | Rode `database/setup.sql` de novo e confira os logs da função |
+| `API_404` | A função `api/poll.js` não foi publicada | Confira se o projeto foi importado com a pasta `api` e Framework Preset **Other** |
+| `API_401`, `API_403` | A Vercel exigiu login antes de liberar a API (proteção de deploy) | Abra o domínio de produção, não o endereço de um deploy específico |
+| `INVALID_RESPONSE` | O `POLL_ID` da Vercel é diferente do `pollId` do `index.html` | Use o mesmo ID nos dois |
+| `NETWORK` | Sem internet ou tempo esgotado | Tente novamente |
+
+Servir apenas o HTML ou usar GitHub Pages não executa a API.
 
 ## Referências de implementação
 

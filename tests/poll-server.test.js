@@ -159,37 +159,65 @@ test('votação encerrada mantém ranking e não registra voto', async () => {
   assert.equal(db.ballots.size, 0);
 });
 
-test('configuração incompleta responde indisponível sem consultar o banco', async () => {
+test('configuração incompleta informa qual variável corrigir, sem consultar o banco', async t => {
+  t.mock.method(console, 'error', () => {});
   const bad = [
-    {},
-    { ...ENV, SUPABASE_URL: 'http://exemplo.supabase.co' },
-    { ...ENV, SUPABASE_SECRET_KEY: 'eyJhbGciOi.publishable' },
-    { ...ENV, VOTE_COOKIE_SECRET: 'curto' },
-    { ...ENV, POLL_ID: 'id inválido' }
+    [{}, 'SUPABASE_URL'],
+    [{ ...ENV, SUPABASE_URL: 'http://exemplo.supabase.co' }, 'SUPABASE_URL'],
+    [{ ...ENV, SUPABASE_URL: 'postgresql://postgres:senha@db.exemplo.supabase.co:5432/postgres' }, 'SUPABASE_URL'],
+    [{ ...ENV, SUPABASE_URL: 'https://supabase.com/dashboard/project/abcd1234/settings/api' }, 'SUPABASE_URL'],
+    [{ ...ENV, SUPABASE_SECRET_KEY: undefined }, 'SUPABASE_SECRET_KEY'],
+    [{ ...ENV, SUPABASE_SECRET_KEY: 'eyJhbGciOiJIUzI1NiJ9.legado' }, 'SUPABASE_SECRET_KEY'],
+    [{ ...ENV, SUPABASE_SECRET_KEY: 'sb_publishable_abc' }, 'SUPABASE_SECRET_KEY'],
+    [{ ...ENV, VOTE_COOKIE_SECRET: 'curto' }, 'VOTE_COOKIE_SECRET'],
+    [{ ...ENV, VOTE_COOKIE_SECRET: 'SUBSTITUA_POR_32_OU_MAIS_CARACTERES_ALEATORIOS' }, 'VOTE_COOKIE_SECRET'],
+    [{ ...ENV, POLL_ID: 'id inválido' }, 'POLL_ID']
   ];
-  for (const env of bad) {
+  for (const [env, reason] of bad) {
     let called = false;
     const response = await handlePoll(get(), { env, fetcher: async () => { called = true; } });
     assert.equal(response.status, 503);
-    assert.equal((await response.json()).error, 'POLL_UNAVAILABLE');
+    assert.deepEqual(await response.json(), { error: 'POLL_UNAVAILABLE', reason, message: 'A votação ainda não está disponível. Tente novamente em instantes.' });
     assert.equal(called, false);
   }
 });
 
-test('falha ou resposta inválida do banco vira 503 sem detalhes internos', async () => {
+test('valores colados com espaços ou URL sem https:// continuam válidos', async () => {
+  const db = fakeDatabase();
+  const env = {
+    SUPABASE_URL: '  exemplo.supabase.co/  ',
+    SUPABASE_SECRET_KEY: ' sb_secret_teste\n',
+    VOTE_COOKIE_SECRET: '\t' + 'x'.repeat(40) + ' ',
+    POLL_ID: ' power-2026-10-13\n'
+  };
+  const response = await handlePoll(get(), { env, fetcher: db.fetcher });
+  assert.equal(response.status, 200);
+  const call = db.calls.at(-1);
+  assert.equal(call.url, 'https://exemplo.supabase.co/rest/v1/rpc/power_poll_snapshot');
+  assert.equal(call.init.headers.apikey, 'sb_secret_teste');
+  assert.equal(call.args.p_campaign, POLL);
+});
+
+test('falha ou resposta inválida do banco vira 503 com o motivo e sem detalhes internos', async t => {
+  const logs = t.mock.method(console, 'error', () => {});
   const failures = [
-    async () => { throw new Error('conexão recusada sb_secret_teste'); },
-    async () => new Response('{"message":"sb_secret_teste"}', { status: 500 }),
-    async () => Response.json(null),
-    async () => Response.json({ total: -1, counts: { pre: {}, whey: {} }, event: {} })
+    [async () => { throw new Error('conexão recusada sb_secret_teste'); }, 'DATABASE_UNREACHABLE'],
+    [async () => new Response('{"message":"Invalid API key sb_secret_teste"}', { status: 401 }), 'DATABASE_KEY'],
+    [async () => new Response('{"code":"PGRST202"}', { status: 404 }), 'DATABASE_SETUP'],
+    [async () => new Response('{"message":"sb_secret_teste"}', { status: 500 }), 'DATABASE_ERROR'],
+    [async () => Response.json(null), 'CAMPAIGN_NOT_FOUND'],
+    [async () => new Response('<html>', { status: 200 }), 'DATABASE_RESPONSE'],
+    [async () => Response.json({ total: -1, counts: { pre: {}, whey: {} }, event: {} }), 'DATABASE_RESPONSE']
   ];
-  for (const fetcher of failures) {
+  for (const [fetcher, reason] of failures) {
     const response = await handlePoll(get(), { env: ENV, fetcher });
     assert.equal(response.status, 503);
     const text = await response.text();
-    assert.equal(JSON.parse(text).error, 'POLL_UNAVAILABLE');
+    assert.deepEqual(JSON.parse(text), { error: 'POLL_UNAVAILABLE', reason, message: 'Não foi possível consultar a votação. Tente novamente.' });
     assert.ok(!text.includes('sb_secret'));
   }
+  assert.equal(logs.mock.callCount(), failures.length);
+  for (const call of logs.mock.calls) assert.ok(!call.arguments.join(' ').includes('sb_secret'));
 });
 
 test('cookie local sem HTTPS não usa prefixo __Host-', async () => {
