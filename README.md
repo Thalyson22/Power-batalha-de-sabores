@@ -30,7 +30,7 @@ Copie o resultado diretamente para `VOTE_COOKIE_SECRET` na Vercel. Mantenha o me
 
 ## Como funciona
 
-- O cliente escolhe **um Fritz e um whey**. Leitinho da Shark Pro participa da categoria whey.
+- O cliente escolhe **um Fritz e um whey**. No whey, a disputa é entre o Chocolate da Evorox e o Leitinho da Shark Pro.
 - O botão **Confirmar meu voto** grava as duas escolhas na mesma operação.
 - A confirmação só aparece após o servidor confirmar o registro.
 - O ranking mostra posição, número de votos e porcentagem de cada sabor. Uma participação corresponde a um voto em cada categoria.
@@ -38,6 +38,10 @@ Copie o resultado diretamente para `VOTE_COOKIE_SECRET` na Vercel. Mantenha o me
 - Os votos são ordenados do maior para o menor. Empates recebem a mesma posição; sabores sem votos não aparecem como líderes.
 - Se a conexão falhar, a página avisa e mantém a última contagem recebida identificada como desatualizada. Não inventa resultados.
 - O voto confirmado não pode ser alterado. Uma restrição única no banco impede duplicação pelo mesmo identificador, inclusive em reenvios simultâneos.
+
+## Sabores fora da disputa
+
+Morango, Baunilha e Cookies & Cream (Evorox) estão ocultos: continuam no `index.html` com o atributo `hidden` e o banco ainda aceita esses valores. O servidor só aceita votos de whey em `chocolate` e `leitinho`. Para trazer um sabor de volta, remova o `hidden` do `<label>` dele no `index.html` e inclua o valor no conjunto `WHEY` de `lib/poll-server.js`. Não é preciso rodar SQL.
 
 ## Um voto por navegador
 

@@ -83,7 +83,7 @@ test('voto confirmado soma nas duas categorias e reenvio não altera nem duplica
   assert.deepEqual(a.counts, { pre: { uva: 1 }, whey: { leitinho: 1 } });
   assert.deepEqual([a.receipt.pre, a.receipt.whey], ['uva', 'leitinho']);
 
-  const again = await (await handlePoll(post(cookie, { pre: 'manga', whey: 'cookies' }), { env: ENV, fetcher: db.fetcher })).json();
+  const again = await (await handlePoll(post(cookie, { pre: 'manga', whey: 'chocolate' }), { env: ENV, fetcher: db.fetcher })).json();
   assert.equal(again.alreadyVoted, true);
   assert.equal(again.total, 1);
   assert.equal(again.receipt.pre, 'uva');
@@ -97,10 +97,10 @@ test('navegadores diferentes contam separadamente', async () => {
   const one = await newBrowser(db), two = await newBrowser(db);
   assert.notEqual(one, two);
   await handlePoll(post(one, { pre: 'uva', whey: 'leitinho' }), { env: ENV, fetcher: db.fetcher });
-  const data = await (await handlePoll(post(two, { pre: 'uva', whey: 'morango' }), { env: ENV, fetcher: db.fetcher })).json();
+  const data = await (await handlePoll(post(two, { pre: 'uva', whey: 'chocolate' }), { env: ENV, fetcher: db.fetcher })).json();
   assert.equal(data.total, 2);
-  assert.deepEqual(data.counts, { pre: { uva: 2 }, whey: { leitinho: 1, morango: 1 } });
-  assert.equal(data.receipt.whey, 'morango');
+  assert.deepEqual(data.counts, { pre: { uva: 2 }, whey: { leitinho: 1, chocolate: 1 } });
+  assert.equal(data.receipt.whey, 'chocolate');
 });
 
 test('banco recebe apenas o hash do navegador, com a chave no cabeçalho apikey', async () => {
@@ -133,7 +133,7 @@ test('voto sem cookie válido pede recarga e não chega ao banco', async () => {
 test('Piña colada é aceito no lugar de Espinafreada', async () => {
   const db = fakeDatabase();
   const cookie = await newBrowser(db);
-  const data = await (await handlePoll(post(cookie, { pre: 'pina-colada', whey: 'baunilha' }), { env: ENV, fetcher: db.fetcher })).json();
+  const data = await (await handlePoll(post(cookie, { pre: 'pina-colada', whey: 'chocolate' }), { env: ENV, fetcher: db.fetcher })).json();
   assert.equal(data.accepted, true);
   assert.deepEqual(data.counts.pre, { 'pina-colada': 1 });
 });
@@ -150,6 +150,7 @@ test('origem, formato e sabores inválidos são recusados', async () => {
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'cafe' })), 400);
   assert.equal(await status(post(cookie, { pre: 'leitinho', whey: 'uva' })), 400);
   assert.equal(await status(post(cookie, { pre: 'espinafreada', whey: 'leitinho' })), 400);
+  for (const hidden of ['morango', 'baunilha', 'cookies']) assert.equal(await status(post(cookie, { pre: 'uva', whey: hidden })), 400);
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'leitinho', extra: 1 })), 400);
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'leitinho', pad: 'x'.repeat(2000) })), 413);
   const put = await handlePoll(new Request(ORIGIN + '/api/poll', { method: 'PUT' }), { env: ENV, fetcher: db.fetcher });
@@ -255,12 +256,12 @@ test('navegador que declara mesma origem pode votar mesmo sem cabeçalho Origin'
   const db = fakeDatabase();
   const cookie = await newBrowser(db);
   const request = new Request(ORIGIN + '/api/poll', {
-    method: 'POST', body: '{"pre":"manga","whey":"baunilha"}',
+    method: 'POST', body: '{"pre":"manga","whey":"chocolate"}',
     headers: { 'content-type': 'application/json', cookie, 'sec-fetch-site': 'same-origin' }
   });
   assert.equal((await handlePoll(request, { env: ENV, fetcher: db.fetcher })).status, 200);
   const sameSite = new Request(ORIGIN + '/api/poll', {
-    method: 'POST', body: '{"pre":"manga","whey":"baunilha"}',
+    method: 'POST', body: '{"pre":"manga","whey":"chocolate"}',
     headers: { 'content-type': 'application/json', cookie, 'sec-fetch-site': 'same-site', origin: 'https://loja.power.example' }
   });
   assert.equal((await handlePoll(sameSite, { env: ENV, fetcher: db.fetcher })).status, 403);
