@@ -8,7 +8,7 @@ Votação com confirmação, contagem compartilhada e ranking separado para pré
 
 1. **Supabase:** crie um projeto em [supabase.com](https://supabase.com/). No SQL Editor, cole e execute o conteúdo completo de `database/setup.sql`. Aguarde a conclusão sem erros. O script cria a campanha e as funções de votação; pode ser repetido sem apagar votos.
 2. **Credenciais:** no painel do projeto Supabase, copie a URL do projeto e uma chave **Secret**, que começa com `sb_secret_`. A chave fica em **Settings → API Keys**. Não use a chave Publishable. Guarde a Secret somente no painel da Vercel, nunca no HTML ou no GitHub.
-3. **GitHub:** extraia o ZIP. Coloque o conteúdo da pasta do projeto na raiz do seu repositório, incluindo `index.html`, `api`, `lib`, `scripts`, `package.json` e `vercel.json`. Inclua também `database`, `tests` e este guia para manutenção. Não envie um ZIP fechado para a Vercel.
+3. **GitHub:** extraia o ZIP. Coloque o conteúdo da pasta do projeto na raiz do seu repositório, incluindo `index.html`, `assets`, `api`, `lib`, `scripts`, `package.json` e `vercel.json`. Inclua também `database`, `tests` e este guia para manutenção. Não envie um ZIP fechado para a Vercel.
 4. **Vercel:** importe esse repositório. Use **Framework Preset: Other** e a raiz do repositório como Root Directory. O `vercel.json` já define Build Command `npm run build` e Output Directory `public`.
 5. **Variáveis:** antes de publicar, adicione as quatro variáveis abaixo ao ambiente **Production**. Se adicioná-las depois, faça um novo deploy.
 6. **Conferência:** abra a URL da Vercel, escolha dois sabores e confirme. Em outro navegador, atualize o ranking e confira o mesmo total. Recarregue o primeiro navegador: ele deve mostrar o voto já registrado. Use a orientação de teste abaixo para evitar misturar ensaios com votos de clientes.
@@ -82,7 +82,8 @@ Para ensaiar a interface em uma implantação Preview, use uma campanha de teste
 | `lib/poll-server.js` | Validação, cookie assinado e comunicação com o banco |
 | `database/setup.sql` | Banco, gravação atômica, ranking e permissões |
 | `database/verify.sql` | Verificações do banco com rollback |
-| `scripts/build.mjs` | Prepara somente o HTML para publicação estática |
+| `assets/` | Fotos dos produtos (WebP) e fontes da marca: Bungee e Montserrat, ambas com licença livre (OFL) |
+| `scripts/build.mjs` | Prepara o HTML, as fotos e as fontes para publicação estática |
 | `vercel.json` | Configuração da hospedagem e cabeçalhos |
 | `tests/` | Testes automatizados locais, sem serviços externos |
 | `.env.example` | Nomes das variáveis, sem credenciais reais |
