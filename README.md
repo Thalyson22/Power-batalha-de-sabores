@@ -1,6 +1,8 @@
 # Batalha dos Sabores — Power Nutrifit
 
-Votação com confirmação, contagem compartilhada e ranking separado para pré-treino Fritz e whey. Campanha da degustação de **13 de outubro de 2026**.
+Votação com confirmação, contagem compartilhada e ranking separado para pré-treino Fritz e whey. Campanha da degustação de **13 de outubro de 2026, a partir das 15h, na PS Fit Academia (Piauí Shopping, Picos)**.
+
+Data, hora e local aparecem a partir do bloco `power-config` no início do `index.html` (`data`, `hora`, `horario`, `local` e `endereco`); para mudar, edite esses campos e os textos iniciais iguais na página.
 
 **Esta versão precisa do projeto completo. Publicar somente o `index.html` não ativa a votação.** O HTML usa a API da Vercel, que registra os votos no Supabase. Não existe contagem fictícia ou ranking salvo apenas no aparelho.
 
