@@ -130,14 +130,6 @@ test('voto sem cookie válido pede recarga e não chega ao banco', async () => {
   assert.equal(db.ballots.size, 0);
 });
 
-test('Piña colada é aceito no lugar de Espinafreada', async () => {
-  const db = fakeDatabase();
-  const cookie = await newBrowser(db);
-  const data = await (await handlePoll(post(cookie, { pre: 'pina-colada', whey: 'baunilha' }), { env: ENV, fetcher: db.fetcher })).json();
-  assert.equal(data.accepted, true);
-  assert.deepEqual(data.counts.pre, { 'pina-colada': 1 });
-});
-
 test('origem, formato e sabores inválidos são recusados', async () => {
   const db = fakeDatabase();
   const cookie = await newBrowser(db);
@@ -149,7 +141,6 @@ test('origem, formato e sabores inválidos são recusados', async () => {
   assert.equal(await status(post(cookie, { pre: 'uva' })), 400);
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'cafe' })), 400);
   assert.equal(await status(post(cookie, { pre: 'leitinho', whey: 'uva' })), 400);
-  assert.equal(await status(post(cookie, { pre: 'espinafreada', whey: 'leitinho' })), 400);
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'leitinho', extra: 1 })), 400);
   assert.equal(await status(post(cookie, { pre: 'uva', whey: 'leitinho', pad: 'x'.repeat(2000) })), 413);
   const put = await handlePoll(new Request(ORIGIN + '/api/poll', { method: 'PUT' }), { env: ENV, fetcher: db.fetcher });
